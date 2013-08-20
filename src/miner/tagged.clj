@@ -33,16 +33,19 @@
 (defprotocol Ednable
   (as-edn-str [x]))
 
+(defn record-name [rec-class]
+  (str/replace (pr-str rec-class) \_ \-))
+
 (defn tag-str [record-class]
   "Returns the string representation of the tag corresponding to the given `record-class`."
-  (let [cname (pr-str record-class)
+  (let [cname (record-name record-class)
         dot (.lastIndexOf cname ".")]
     (when (pos? dot)
       (str (subs cname 0 dot) "/" (subs cname (inc dot))))))
 
 (defn class->factory [record-class]
   "Returns the map-style record factory for the `record-class`."
-  (let [cname (str/replace (pr-str record-class) \_ \-)
+  (let [cname (record-name record-class)
         dot (.lastIndexOf cname ".")]
     (when (pos? dot)
       (resolve (symbol (str (subs cname 0 dot) "/map->" (subs cname (inc dot))))))))

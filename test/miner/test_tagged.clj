@@ -12,10 +12,11 @@
   
 
 (deftest basics []
-  (is (tag/edn-str 42) "42")
-  (is (tag/edn-str [:a 42 'str]) "[:a 42 str]"))
+  ;; for basic things edn-str is like pr-str
+  (doseq [x [:a 'foo [[[:deep]]] {:a 1} "basics" 42 (range 10)]]
+    (is (tag/edn-str x) (pr-str x))))
 
-(deftest reading []
+(deftest reading-and-printing []
   (let [unknown-string "#unk.ns/Unk 42"
         foo-string "#miner.test-tagged/Foo 42"
         unk42 (tag/->TaggedValue 'unk.ns/Unk 42)
@@ -23,4 +24,12 @@
     (is (tag/read-string unknown-string) unk42)
     (is (tag/read-string foo-string) foo42)
     (is (tag/edn-str foo42) foo-string)
-    (is (tag/edn-str unk42) unknown-string)))
+    (is (tag/edn-str unk42) unknown-string)
+    (is (tag/edn-str (tag/read-string unknown-string)) unknown-string)
+    (is (tag/read-string (tag/edn-str (tag/read-string unknown-string))) unk42)
+    (is (tag/edn-str (tag/read-string foo-string)) foo42)
+    (is (tag/read-string (tag/edn-str (tag/read-string foo-string))) foo42)))
+
+
+
+  
