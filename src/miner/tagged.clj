@@ -5,12 +5,10 @@
 
 ;; adapted from "The Data-Reader's Guide to the Galaxy" talk at Clojure/West 2013
 
-(declare edn-str)
-
 ;; Holder for unknown tags
 (defrecord TaggedValue [tag value]
   Object 
-  (toString [x] (edn-str x)))
+  (toString [x] (pr-str x)))
 
 (defn tag->factory
   "Returns the map-style record factory for the `tag` symbol.  Returns nil if the `tag` is
@@ -25,13 +23,10 @@
   the given map value.  If the tag is unknown, use the generic miner.tagged.TaggedValue."  
   [tag value]
   (if-let [factory (and (map? value)
-                            (Character/isUpperCase (first (name tag)))
-                            (tag->factory tag))]
+                        (Character/isUpperCase ^Character (first (name tag)))
+                        (tag->factory tag))]
     (factory value)
     (->TaggedValue tag value)))
-
-(defprotocol EDNic
-  (as-edn-str [x]))
 
 (defn record-name [rec-class]
   (str/replace (pr-str rec-class) \_ \-))
@@ -39,43 +34,35 @@
 (defn tag-str [record-class]
   "Returns the string representation of the tag corresponding to the given `record-class`."
   (let [cname (record-name record-class)
-        dot (.lastIndexOf cname ".")]
+        dot (.lastIndexOf ^String cname ".")]
     (when (pos? dot)
       (str (subs cname 0 dot) "/" (subs cname (inc dot))))))
 
 (defn class->factory [record-class]
   "Returns the map-style record factory for the `record-class`."
   (let [cname (record-name record-class)
-        dot (.lastIndexOf cname ".")]
+        dot (.lastIndexOf ^String cname ".")]
     (when (pos? dot)
       (resolve (symbol (str (subs cname 0 dot) "/map->" (subs cname (inc dot))))))))
 
-;; SEM BUG: nested values need as-edn-str, not pr-str, to handle non-EDN values
+;; marker protocol
+(defprotocol EdnRecord)
 
+;; preserve the original string representation of the unknown tagged literal
+(defmethod print-method miner.tagged.TaggedValue [^miner.tagged.TaggedValue this ^java.io.Writer w]
+   (.write w "#")
+   (print-method (:tag this) w)
+   (.write w " ")
+   (print-method (:value this) w))
 
-(extend-protocol EDNic
-  nil
-  (as-edn-str [x] (pr-str x))
+;; any defrecord can implement the marker protocol EdnRecord to get this print-method
+(defmethod print-method miner.tagged.EdnRecord [^miner.tagged.EdnRecord this ^java.io.Writer w]
+   (.write w "#")
+   (.write w ^String (tag-str (class this)))
+   (.write w " ")
+   (print-method (into {} this) w))
 
-  Object
-  (as-edn-str [x] (pr-str x))
-
-  ;; represent records as tagged literals
-  clojure.lang.IRecord
-  (as-edn-str [x] (str "#" (tag-str (class x)) " " (as-edn-str (into {} x))))
-
-  ;; preserve the original string representation of the unknown tagged literal
-  miner.tagged.TaggedValue
-  (as-edn-str [x] (str "#" (pr-str (:tag x)) " " (as-edn-str (:value x))))
-
-)
-
-(defn edn-str
-  "Similar to pr-str, but represents Records as EDN tagged literals."
-  ([] "")
-  ([x] (as-edn-str x))
-  ([x & more]
-     (str/join " " (map as-edn-str (conj more x)))))
+(prefer-method print-method miner.tagged.EdnRecord clojure.lang.IRecord)
 
 (def default-tagged-read-options {:default #'tagged-default-reader})
 ;; other possible keys :eof and :readers
@@ -92,21 +79,14 @@
   ([options s] (edn/read-string (merge default-tagged-read-options options) s)))
 
 
-;; In the REPL, you can use this to install the default-reader as the default:
+;; In the REPL, you can use this to install the tagged-default-reader as the default:
 
 (comment 
+
   (require '[miner.tagged :as tag])
   (alter-var-root #'clojure.core/*default-data-reader-fn* (constantly tag/tagged-default-reader))
+
 )
 
-;; However, it's better just to use the provided `miner.tagged/read` and `miner.tagged/read-string` 
+;; However, it's probably better just to use the `miner.tagged/read` and `miner.tagged/read-string`
 ;; functions.
-
-;; You could use edn-str in a custom print-method for your record type if you always want to use the
-;; tagged literal notation.
-
-(comment 
- (require '[miner.tagged :as tag])
- (defmethod print-method my.ns.Rec [^my.ns.Rec this ^java.io.Writer w] 
-   (.write w (tag/edn-str this)))
-)
