@@ -58,33 +58,36 @@
   Object
   (as-edn-str [x] (pr-str x))
 
+  ;; represent records as tagged literals
   clojure.lang.IRecord
   (as-edn-str [x] (str "#" (tag-str (class x)) " " (pr-str (into {} x))))
 
+  ;; preserve the original string representation of the unknown tagged literal
   miner.tagged.TaggedValue
   (as-edn-str [x] (str "#" (pr-str (:tag x)) " " (pr-str (:value x))))
 
 )
 
 (defn edn-str
+  "Similar to pr-str, but represents Records as EDN tagged literals."
   ([] "")
   ([x] (as-edn-str x))
   ([x & more]
      (str/join " " (map as-edn-str (conj more x)))))
 
-(def ^:private tagged-read-options {:default #'tagged-default-reader})
+(def default-tagged-read-options {:default #'tagged-default-reader})
 ;; other possible keys :eof and :readers
 
 (defn read
   "Like clojure.edn/read but the :default option is `tagged-default-reader`."
   ([] (read *in*))
   ([stream] (read {} stream))
-  ([options stream] (edn/read (merge tagged-read-options options) stream)))
+  ([options stream] (edn/read (merge default-tagged-read-options options) stream)))
 
 (defn read-string 
   "Like clojure.edn/read-string but the :default option is `tagged-default-reader`."
   ([s] (read-string {} s))
-  ([options s] (edn/read-string (merge tagged-read-options options) s)))
+  ([options s] (edn/read-string (merge default-tagged-read-options options) s)))
 
 
 ;; In the REPL, you can use this to install the default-reader as the default:
