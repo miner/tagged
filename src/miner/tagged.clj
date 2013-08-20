@@ -50,6 +50,8 @@
     (when (pos? dot)
       (resolve (symbol (str (subs cname 0 dot) "/map->" (subs cname (inc dot))))))))
 
+;; SEM BUG: nested values need as-edn-str, not pr-str, to handle non-EDN values
+
 
 (extend-protocol EDNic
   nil
@@ -60,11 +62,11 @@
 
   ;; represent records as tagged literals
   clojure.lang.IRecord
-  (as-edn-str [x] (str "#" (tag-str (class x)) " " (pr-str (into {} x))))
+  (as-edn-str [x] (str "#" (tag-str (class x)) " " (as-edn-str (into {} x))))
 
   ;; preserve the original string representation of the unknown tagged literal
   miner.tagged.TaggedValue
-  (as-edn-str [x] (str "#" (pr-str (:tag x)) " " (pr-str (:value x))))
+  (as-edn-str [x] (str "#" (pr-str (:tag x)) " " (as-edn-str (:value x))))
 
 )
 
