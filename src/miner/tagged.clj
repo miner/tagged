@@ -30,7 +30,7 @@
     (factory value)
     (->TaggedValue tag value)))
 
-(defprotocol Ednable
+(defprotocol EDNic
   (as-edn-str [x]))
 
 (defn record-name [rec-class]
@@ -51,7 +51,7 @@
       (resolve (symbol (str (subs cname 0 dot) "/map->" (subs cname (inc dot))))))))
 
 
-(extend-protocol Ednable
+(extend-protocol EDNic
   nil
   (as-edn-str [x] (pr-str x))
 
