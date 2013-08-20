@@ -16,6 +16,7 @@
         foo-string "#miner.test-tagged/Foo 42"
         unk42 (tag/->TaggedValue 'unk.ns/Unk 42)
         foo42 (->Foo 42)
+        nested-string "#miner.test-tagged/Foo {:a #unk.ns/Unk 42}"
         nested (->Foo unk42)]
     (is (tag/read-string unknown-string) unk42)
     (is (tag/read-string foo-string) foo42)
@@ -25,9 +26,5 @@
     (is (tag/read-string (pr-str (tag/read-string unknown-string))) unk42)
     (is (pr-str (tag/read-string foo-string)) foo42)
     (is (tag/read-string (pr-str (tag/read-string foo-string))) foo42)
+    (is (pr-str (tag/read-string nested-string)) nested)
     (is (tag/read-string (pr-str (tag/read-string (pr-str nested)))) nested)))
-
-
-
-
-  

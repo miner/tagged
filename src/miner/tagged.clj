@@ -5,6 +5,8 @@
 
 ;; adapted from "The Data-Reader's Guide to the Galaxy" talk at Clojure/West 2013
 
+(defprotocol EdnRecord "A marker protocol for Records that print as EDN tagged literals")
+
 ;; Holder for unknown tags
 (defrecord TaggedValue [tag value]
   Object 
@@ -44,9 +46,6 @@
         dot (.lastIndexOf ^String cname ".")]
     (when (pos? dot)
       (resolve (symbol (str (subs cname 0 dot) "/map->" (subs cname (inc dot))))))))
-
-;; marker protocol
-(defprotocol EdnRecord)
 
 ;; preserve the original string representation of the unknown tagged literal
 (defmethod print-method miner.tagged.TaggedValue [^miner.tagged.TaggedValue this ^java.io.Writer w]
