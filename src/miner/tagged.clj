@@ -62,6 +62,8 @@
    (print-method (into {} this) w))
 
 (prefer-method print-method miner.tagged.EdnRecord clojure.lang.IRecord)
+(prefer-method print-method miner.tagged.EdnRecord clojure.lang.IPersistentMap)
+(prefer-method print-method miner.tagged.EdnRecord java.util.Map)
 
 (def default-tagged-read-options {:default #'tagged-default-reader})
 ;; other possible keys :eof and :readers
