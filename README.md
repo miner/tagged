@@ -26,7 +26,7 @@ http://www.infoq.com/presentations/Clojure-Data-Reader
 
 Add the dependency to your project.clj:
 
-    [com.velisco/tagged "0.2.0"]
+    [com.velisco/tagged "0.2.1"]
 
 I might forget to update the version number here in the README.  The latest version is available on
 Clojars.org:
