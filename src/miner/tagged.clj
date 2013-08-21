@@ -11,8 +11,8 @@
   (toString [x] (pr-str x)))
 
 (defn tag->factory
-  "Returns the map-style record factory for the `tag` symbol.  Returns nil if the `tag` is
-  unqualified."  
+  "Returns the map-style record factory for the `tag` symbol.  Returns nil if `tag` does not
+  refer to a record."
   [tag]
   (when (namespace tag)
     (resolve (symbol (str (namespace tag) "/map->" (name tag))))))
@@ -28,10 +28,11 @@
     (factory value)
     (->TaggedValue tag value)))
 
-(defn record-name [rec-class]
+(defn- record-name [rec-class]
+  "Returns the record's name as a String given the class `rec-class`."
   (str/replace (pr-str rec-class) \_ \-))
 
-(defn tag-str
+(defn- tag-string
   "Returns the string representation of the tag corresponding to the given `record-class`."
   [record-class]
   (let [cname (record-name record-class)
@@ -62,7 +63,7 @@
        (miner.tagged/pr-tagged-record-on this w))"
   [this ^java.io.Writer w]
   (.write w "#")
-  (.write w ^String (tag-str (class this)))
+  (.write w ^String (tag-string (class this)))
   (.write w " ")
   (print-method (into {} this) w))
 
