@@ -2,7 +2,10 @@
   (:require [miner.tagged :as tag]
             [clojure.test :refer :all]))
 
-(defrecord Foo [a] tag/EdnRecord)
+(defrecord Foo [a])
+
+(defmethod print-method miner.test_tagged.Foo [^miner.test_tagged.Foo this ^java.io.Writer w]
+  (tag/pr-tagged-record-on this w))
 
 (deftest factory []
   (is (= (tag/class->factory miner.test_tagged.Foo) #'map->Foo))

@@ -3,13 +3,12 @@
 A Clojure library for encoding Records as EDN tagged literals.
 
 The EDN format does not directly support Clojure records.  This small library allows records to be
-printed as tagged literals using a simple "marker" protocol.  Just add `EdnRecord` to the end of
-your `defrecord` form and it will get a `print-method` that uses a data literal format instead of
-the usual record format.  For example, the record class name `my.ns.Rec` is translated into the
-literal tag `my.ns/Rec`.  That slight notational change, plus a convenient default data-reader
-(`tagged-default-reader`), allows you to use records as EDN data.  The library also includes
-variants of `clojure.edn/read` and `clojure.edn/read-string` with the `tagged-default-reader` set as
-the `:default`.
+printed and read as tagged literals which work with EDN.  Just implement a `print-method` that calls
+`miner.tagged/pr-tagged-record-on` and your record will `pr` in a tagged literal format.  For
+example, the record class name `my.ns.Rec` is translated into the literal tag `my.ns/Rec`.  That
+slight notational change, plus a convenient default data-reader (`tagged-default-reader`), allows
+you to use records as EDN data.  The library also includes variants of `clojure.edn/read` and
+`clojure.edn/read-string` with the `tagged-default-reader` set as the `:default`.
 
 The `tagged-default-reader` has a second feature.  It handles *unknown* tags using a `TaggedValue`
 record which preserves the original print representation as a data literal.  This is convenient if
@@ -26,7 +25,7 @@ http://www.infoq.com/presentations/Clojure-Data-Reader
 
 Add the dependency to your project.clj:
 
-    [com.velisco/tagged "0.2.1"]
+    [com.velisco/tagged "0.3.0"]
 
 I might forget to update the version number here in the README.  The latest version is available on
 Clojars.org:
@@ -40,27 +39,32 @@ https://clojars.org/com.velisco/tagged
     (require '[miner.tagged :as tag])
 	(require '[clojure.edn :as edn])
 	
-	(defrecord Basic [b])
-	(pr-str (->Basic 101))
-	;;->  "#user.Basic{:b 101}"
+	(defrecord Rec [a])
+	(pr-str (->Rec 101))
+	;;->  "#user.Rec{:a 101}"
 	
-	(def b (edn/read-string "#user.Basic{:b 101}"))
-    ;; Exception (with a misleading error message)
+	(def bad (edn/read-string "#user.Rec{:a 101}"))
+    ;; Exception (with a misleading error message).
+	;; The EDN reader does not support the record notation.
 
-	;; add the EdnRecord "marker" protocol to the defrecord
-	(defrecord Enhanced [e] tag/EdnRecord)
-	(pr-str (->Enhanced 42))
-	;;=> "#user/Enhanced {:e 42}"
+	;; Now implement the print-method
+    (defmethod print-method user.Rec [this w] (tag/print-tagged-record-on this w))
 
-	(def e (tag/read-string "#user/Enhanced {:e 42}"))
-	(pr-str e)
-	;;=> "#user/Enhanced {:e 42}"
+	(pr-str (->Rec 42))
+	;;=> "#user/Rec {:a 42}"
+    ;; notice the format is now a tagged literal
+	
+	;; use the tag/read-string variant to read the new tagged literal
+	(def x (tag/read-string "#user/Rec {:a 42}"))
+	(pr-str x)
+	;;=> "#user/Rec {:a 42}"
 
-	(:e e)
+	(:a x)
 	;;=> 42
 
-	(class e)
-	;;=> user.Enhanced
+	(class x)
+	;;=> user.Rec
+	;; It's really a record, but it "looks" like a tagged literal so it's now EDN compatible.
 	
 	(def unknown (tag/read-string "#my.ns/Unknown 13"))
 	(pr-str unknown)

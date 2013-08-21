@@ -5,8 +5,6 @@
 
 ;; adapted from "The Data-Reader's Guide to the Galaxy" talk at Clojure/West 2013
 
-(defprotocol EdnRecord "A marker protocol for Records that print as EDN tagged literals")
-
 ;; Holder for unknown tags
 (defrecord TaggedValue [tag value]
   Object 
@@ -33,15 +31,17 @@
 (defn record-name [rec-class]
   (str/replace (pr-str rec-class) \_ \-))
 
-(defn tag-str [record-class]
+(defn tag-str
   "Returns the string representation of the tag corresponding to the given `record-class`."
+  [record-class]
   (let [cname (record-name record-class)
         dot (.lastIndexOf ^String cname ".")]
     (when (pos? dot)
       (str (subs cname 0 dot) "/" (subs cname (inc dot))))))
 
-(defn class->factory [record-class]
+(defn class->factory
   "Returns the map-style record factory for the `record-class`."
+  [record-class]
   (let [cname (record-name record-class)
         dot (.lastIndexOf ^String cname ".")]
     (when (pos? dot)
@@ -54,29 +54,30 @@
    (.write w " ")
    (print-method (:value this) w))
 
-;; any defrecord can implement the marker protocol EdnRecord to get this print-method
-(defmethod print-method miner.tagged.EdnRecord [^miner.tagged.EdnRecord this ^java.io.Writer w]
-   (.write w "#")
-   (.write w ^String (tag-str (class this)))
-   (.write w " ")
-   (print-method (into {} this) w))
+(defn pr-tagged-record-on
+  "Prints the EDN tagged literal representation of the record `this` on the java.io.Writer `w`.
+  Useful for implementing a print-method on a record class.  For example:
 
-(prefer-method print-method miner.tagged.EdnRecord clojure.lang.IRecord)
-(prefer-method print-method miner.tagged.EdnRecord clojure.lang.IPersistentMap)
-(prefer-method print-method miner.tagged.EdnRecord java.util.Map)
+     (defmethod print-method my.ns.MyRecord [^my.ns.MyRecord this ^java.io.Writer w]
+       (miner.tagged/pr-tagged-record-on this w))"
+  [this ^java.io.Writer w]
+  (.write w "#")
+  (.write w ^String (tag-str (class this)))
+  (.write w " ")
+  (print-method (into {} this) w))
 
 (def default-tagged-read-options {:default #'tagged-default-reader})
 ;; other possible keys :eof and :readers
 
 (defn read
   "Like clojure.edn/read but the :default option is `tagged-default-reader`."
-  ([] (read *in*))
-  ([stream] (read {} stream))
+  ([] (edn/read default-tagged-read-options *in*))
+  ([stream] (edn/read default-tagged-read-options stream))
   ([options stream] (edn/read (merge default-tagged-read-options options) stream)))
 
 (defn read-string 
   "Like clojure.edn/read-string but the :default option is `tagged-default-reader`."
-  ([s] (read-string {} s))
+  ([s] (edn/read-string default-tagged-read-options s))
   ([options s] (edn/read-string (merge default-tagged-read-options options) s)))
 
 
