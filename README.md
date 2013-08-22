@@ -8,18 +8,16 @@ Just implement a `print-method` that calls `miner.tagged/pr-tagged-record-on` an
 `pr` in a tagged literal format.  For example, the record class name `my.ns.Rec` is translated into
 the literal tag `my.ns/Rec`.  That slight notational change, plus a convenient default data-reader
 (`tagged-default-reader`), allows you to use records as EDN data.  The library also includes
-variants of `clojure.edn/read` and `clojure.edn/read-string` with the `tagged-default-reader` set as
-the `:default`.
+variants of `read` and `read-string` with the `tagged-default-reader` set as the `:default`.
 
 The `tagged-default-reader` has a second feature.  It handles *unknown* tags using a `TaggedValue`
-record which preserves the original print representation as a data literal.  This is convenient if
+record which preserves the original print representation as a tagged literal.  This is convenient if
 your program is interested only in a subset of the data it's processing and you want to preserve any
 information that you don't understand.
 
-This code was adapted from my presentation at *Clojure/West 2013*: **The Data-Reader's Guide to The
-Galaxy**.  You're welcome to copy the source and modify it to suit your needs.
-
-http://www.infoq.com/presentations/Clojure-Data-Reader
+This code was adapted from my presentation at *Clojure/West 2013*:
+[**The Data-Reader's Guide to The Galaxy**](http://www.infoq.com/presentations/Clojure-Data-Reader).
+You're welcome to copy the source and modify it to suit your needs.
 
 
 ## Leiningen
