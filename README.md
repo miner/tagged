@@ -2,7 +2,7 @@
 
 A Clojure library for encoding Records as EDN tagged literals.
 
-The https://github.com/edn-format/edn[**EDN**] format does not directly support Clojure records.
+The [**EDN**](https://github.com/edn-format/edn) format does not directly support Clojure records.
 This small library allows records to be printed and read as tagged literals which work with EDN.
 Just implement a `print-method` that calls `miner.tagged/pr-tagged-record-on` and your record will
 `pr` in a tagged literal format.  For example, the record class name `my.ns.Rec` is translated into
