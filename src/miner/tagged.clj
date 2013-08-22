@@ -59,7 +59,7 @@
   "Prints the EDN tagged literal representation of the record `this` on the java.io.Writer `w`.
   Useful for implementing a print-method on a record class.  For example:
 
-     (defmethod print-method my.ns.MyRecord [^my.ns.MyRecord this ^java.io.Writer w]
+     (defmethod print-method my.ns.MyRecord [this w]
        (miner.tagged/pr-tagged-record-on this w))"
   [this ^java.io.Writer w]
   (.write w "#")

@@ -4,7 +4,7 @@
 
 (defrecord Foo [a])
 
-(defmethod print-method miner.test_tagged.Foo [^miner.test_tagged.Foo this ^java.io.Writer w]
+(defmethod print-method miner.test_tagged.Foo [this w]
   (tag/pr-tagged-record-on this w))
 
 (deftest factory []

@@ -1,6 +1,6 @@
 # tagged
 
-A Clojure library for encoding Records as EDN tagged literals.
+A Clojure library for printing and reading Records as EDN tagged literals.
 
 The [**EDN**](https://github.com/edn-format/edn) format does not directly support Clojure records.
 This small library allows records to be printed and read as tagged literals which work with EDN.
