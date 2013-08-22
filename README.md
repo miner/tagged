@@ -2,13 +2,14 @@
 
 A Clojure library for encoding Records as EDN tagged literals.
 
-The EDN format does not directly support Clojure records.  This small library allows records to be
-printed and read as tagged literals which work with EDN.  Just implement a `print-method` that calls
-`miner.tagged/pr-tagged-record-on` and your record will `pr` in a tagged literal format.  For
-example, the record class name `my.ns.Rec` is translated into the literal tag `my.ns/Rec`.  That
-slight notational change, plus a convenient default data-reader (`tagged-default-reader`), allows
-you to use records as EDN data.  The library also includes variants of `clojure.edn/read` and
-`clojure.edn/read-string` with the `tagged-default-reader` set as the `:default`.
+The https://github.com/edn-format/edn[**EDN**] format does not directly support Clojure records.
+This small library allows records to be printed and read as tagged literals which work with EDN.
+Just implement a `print-method` that calls `miner.tagged/pr-tagged-record-on` and your record will
+`pr` in a tagged literal format.  For example, the record class name `my.ns.Rec` is translated into
+the literal tag `my.ns/Rec`.  That slight notational change, plus a convenient default data-reader
+(`tagged-default-reader`), allows you to use records as EDN data.  The library also includes
+variants of `clojure.edn/read` and `clojure.edn/read-string` with the `tagged-default-reader` set as
+the `:default`.
 
 The `tagged-default-reader` has a second feature.  It handles *unknown* tags using a `TaggedValue`
 record which preserves the original print representation as a data literal.  This is convenient if
@@ -40,35 +41,34 @@ https://clojars.org/com.velisco/tagged
 	(require '[clojure.edn :as edn])
 	
 	(defrecord Rec [a])
-	(pr-str (->Rec 101))
-	;;->  "#user.Rec{:a 101}"
+	(def r1 (->Rec 1))
+
+	(pr-str r1)
+	;;-> "#user.Rec{:a 1}"
 	
-	(def bad (edn/read-string "#user.Rec{:a 101}"))
-    ;; Exception (with a misleading error message).
-	;; The EDN reader does not support the record notation.
+	(= r1 (edn/read-string (pr-str r1)))
+    ;; Throws an exception with a misleading error message:
+    ;;   RuntimeException No reader function for tag user.Rec  
+	;;   clojure.lang.EdnReader$TaggedReader.readTagged (EdnReader.java:739)
+	;; It's trying to say that the EDN reader does not support the record notation.
 
 	;; Now implement the print-method
-    (defmethod print-method user.Rec [this w] (tag/print-tagged-record-on this w))
+    (defmethod print-method user.Rec [this w] (tag/pr-tagged-record-on this w))
 
-	(pr-str (->Rec 42))
-	;;=> "#user/Rec {:a 42}"
+	(pr-str r1)
+	;;=> "#user/Rec {:a 1}"
     ;; notice the format is now a tagged literal
-	
-	;; use the tag/read-string variant to read the new tagged literal
-	(def x (tag/read-string "#user/Rec {:a 42}"))
-	(pr-str x)
-	;;=> "#user/Rec {:a 42}"
 
-	(:a x)
-	;;=> 42
+	;; use the tag/read-string variant (namespace *tag* instead of *edn*) 
+	;; to read the tagged record literal
+	(= r1 (tag/read-string (pr-str r1)))
+	;;=> true
 
-	(class x)
-	;;=> user.Rec
-	;; It's really a record, but it "looks" like a tagged literal so it's now EDN compatible.
-	
+	;; A second feature of the `tagged-default-reader` is handling *unknown* tags.
 	(def unknown (tag/read-string "#my.ns/Unknown 13"))
 	(pr-str unknown)
 	;;=> "#my.ns/Unknown 13"
+	;; The print representation is preserved, but the value is really a record.
 
 	(class unknown)
 	;;=> miner.tagged.TaggedValue
