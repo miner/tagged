@@ -49,7 +49,7 @@
       (resolve (symbol (str (subs cname 0 dot) "/map->" (subs cname (inc dot))))))))
 
 ;; preserve the original string representation of the unknown tagged literal
-(defmethod print-method miner.tagged.TaggedValue [^miner.tagged.TaggedValue this ^java.io.Writer w]
+(defmethod print-method miner.tagged.TaggedValue [this ^java.io.Writer w]
    (.write w "#")
    (print-method (:tag this) w)
    (.write w " ")
