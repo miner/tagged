@@ -26,10 +26,14 @@ Add the dependency to your project.clj:
 
     [com.velisco/tagged "0.3.0"]
 
-I might forget to update the version number here in the README.  The latest version is available on
+
+In case I forget to update the version number here in the README, the latest version is available on
 Clojars.org:
 
-https://clojars.org/com.velisco/tagged
+[![Tagged on clojars.org][latest]][clojar]
+
+[latest]: https://clojars.org/com.velisco/tagged/latest-version.svg "Tagged on clojars.org"
+[clojar]: https://clojars.org/com.velisco/tagged
 
 
 ## Example
