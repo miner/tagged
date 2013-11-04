@@ -28,9 +28,9 @@
     (factory value)
     (->TaggedValue tag value)))
 
-(defn- record-name [rec-class]
-  "Returns the record's name as a String given the class `rec-class`."
-  (str/replace (pr-str rec-class) \_ \-))
+(defn- record-name [record-class]
+  "Returns the record's name as a String given the class `record-class`."
+  (str/replace (pr-str record-class) \_ \-))
 
 (defn- tag-string
   "Returns the string representation of the tag corresponding to the given `record-class`."
@@ -39,6 +39,12 @@
         dot (.lastIndexOf ^String cname ".")]
     (when (pos? dot)
       (str (subs cname 0 dot) "/" (subs cname (inc dot))))))
+
+(defn class->tag
+  "Returns the tag symbol for the given `record-class`."
+  [record-class]
+  (when-let [tagstr (tag-string record-class)]
+    (symbol tagstr)))
 
 (defn class->factory
   "Returns the map-style record factory for the `record-class`."

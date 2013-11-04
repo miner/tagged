@@ -7,14 +7,17 @@
 (defmethod print-method miner.test_tagged.Foo [this w]
   (tag/pr-tagged-record-on this w))
 
-(deftest factory []
+(deftest factory
   (is (= (tag/class->factory miner.test_tagged.Foo) #'map->Foo))
   (is (= ((tag/class->factory miner.test_tagged.Foo) {:a 1}) (map->Foo {:a 1})))
   (is (= (tag/tag->factory 'miner.test-tagged/Foo) #'map->Foo))
   (is (= ((tag/tag->factory 'miner.test-tagged/Foo) {:a 11}) (map->Foo {:a 11}))))
   
+(deftest tag-symbol 
+  (is (= (tag/class->tag miner.test_tagged.Foo) 'miner.test-tagged/Foo))
+  (is (= (tag/class->tag (class (->Foo 42))) 'miner.test-tagged/Foo)))
 
-(deftest reading-and-printing []
+(deftest reading-and-printing
   (let [unknown-string "#unk.ns/Unk 42"
         foo-string "#miner.test-tagged/Foo 42"
         unk42 (tag/->TaggedValue 'unk.ns/Unk 42)
