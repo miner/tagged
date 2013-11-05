@@ -30,6 +30,12 @@
   (is (= (tag/edn-str (java.util.UUID/fromString "277826bd-e220-4809-806e-ef906d8fb6b4"))
          "#uuid \"277826bd-e220-4809-806e-ef906d8fb6b4\"")))
 
+(deftest edn-values
+  (is (nil? (tag/edn-value nil)))
+  (is (= (tag/edn-value (java.util.Date. 0)) (java.util.Date. 0)))
+  (is (= (tag/edn-value 'foo) 'foo))
+  (is (= (tag/edn-value (->Foo 42)) {:a 42})))  
+
 (deftest reading-and-printing
   (let [unknown-string "#unk.ns/Unk 42"
         foo-string "#miner.test-tagged/Foo {:a 42}"
@@ -38,6 +44,8 @@
         nested-string "#miner.test-tagged/Foo {:a #unk.ns/Unk 42}"
         nested (->Foo unk42)]
     (is (= (tag/read-string unknown-string) unk42))
+    (is (= (tag/edn-tag (tag/read-string unknown-string)) 'unk.ns/Unk))
+    (is (= (tag/edn-value (tag/read-string unknown-string)) 42))
     (is (= (tag/read-string foo-string) foo42))
     (is (= (pr-str foo42) foo-string))
     (is (= (pr-str unk42) unknown-string))

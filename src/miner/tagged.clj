@@ -90,41 +90,49 @@
 
 (defprotocol EdnTag
   (edn-tag [this])
-  (edn-str [this]))
+  (edn-str [this])
+  (edn-value [this]))
 
 (extend-protocol EdnTag
   nil
   (edn-tag [this] nil)
   (edn-str [this] (pr-str this))
+  (edn-value [this] this)
 
   Object
   (edn-tag [this] nil)
   (edn-str [this] (pr-str this))
+  (edn-value [this] this)
 
   miner.tagged.TaggedValue
   (edn-tag [this] (:tag this))
   (edn-str [this] (pr-str this))
+  (edn-value [this] (:value this))
 
   clojure.lang.IRecord
   (edn-tag [this] (class->tag (class this)))
   (edn-str [this] (with-out-str (pr-tagged-record-on this *out*)))
+  (edn-value [this] (into {} this))
 
   java.util.Date 
   (edn-tag [this] 'inst)
   (edn-str [this] (pr-str this))
+  (edn-value [this] this)
 
   java.util.Calendar
   (edn-tag [this] 'inst)
   (edn-str [this] (pr-str this))
+  (edn-value [this] this)
 
   java.sql.Timestamp
   (edn-tag [this] 'inst)
   (edn-str [this] (pr-str this))
+  (edn-value [this] this)
 
   java.util.UUID
   (edn-tag [this] 'uuid)
-  (edn-str [this] (pr-str this))  )
-
+  (edn-str [this] (pr-str this))  
+  (edn-value [this] this)  )
 
 ;; In the REPL, you can use this to install the tagged-default-reader as the default:
 
