@@ -17,20 +17,33 @@
   (is (= (tag/class->tag miner.test_tagged.Foo) 'miner.test-tagged/Foo))
   (is (= (tag/class->tag (class (->Foo 42))) 'miner.test-tagged/Foo)))
 
+(deftest edn-tag-and-str
+  (is (nil? (tag/edn-tag 42)))
+  (is (= (tag/edn-str 'foo) "foo"))
+  (is (= (tag/edn-tag (->Foo 42)) 'miner.test-tagged/Foo))
+  (is (= (tag/edn-str (->Foo 42)) "#miner.test-tagged/Foo {:a 42}"))
+  (is (= (tag/edn-tag (java.util.Date.)) 'inst))
+  (is (= (tag/edn-tag (java.util.Calendar/getInstance)) 'inst))
+  (is (= (tag/edn-tag (java.sql.Timestamp. 0)) 'inst))
+  (is (= (tag/edn-str (java.sql.Timestamp. 0)) "#inst \"1970-01-01T00:00:00.000000000-00:00\""))
+  (is (= (tag/edn-tag (java.util.UUID/fromString "277826bd-e220-4809-806e-ef906d8fb6b4")) 'uuid))
+  (is (= (tag/edn-str (java.util.UUID/fromString "277826bd-e220-4809-806e-ef906d8fb6b4"))
+         "#uuid \"277826bd-e220-4809-806e-ef906d8fb6b4\"")))
+
 (deftest reading-and-printing
   (let [unknown-string "#unk.ns/Unk 42"
-        foo-string "#miner.test-tagged/Foo 42"
+        foo-string "#miner.test-tagged/Foo {:a 42}"
         unk42 (tag/->TaggedValue 'unk.ns/Unk 42)
         foo42 (->Foo 42)
         nested-string "#miner.test-tagged/Foo {:a #unk.ns/Unk 42}"
         nested (->Foo unk42)]
-    (is (tag/read-string unknown-string) unk42)
-    (is (tag/read-string foo-string) foo42)
-    (is (pr-str foo42) foo-string)
-    (is (pr-str unk42) unknown-string)
-    (is (pr-str (tag/read-string unknown-string)) unknown-string)
-    (is (tag/read-string (pr-str (tag/read-string unknown-string))) unk42)
-    (is (pr-str (tag/read-string foo-string)) foo42)
-    (is (tag/read-string (pr-str (tag/read-string foo-string))) foo42)
-    (is (pr-str (tag/read-string nested-string)) nested)
-    (is (tag/read-string (pr-str (tag/read-string (pr-str nested)))) nested)))
+    (is (= (tag/read-string unknown-string) unk42))
+    (is (= (tag/read-string foo-string) foo42))
+    (is (= (pr-str foo42) foo-string))
+    (is (= (pr-str unk42) unknown-string))
+    (is (= (pr-str (tag/read-string unknown-string)) unknown-string))
+    (is (= (tag/read-string (pr-str (tag/read-string unknown-string))) unk42))
+    (is (= (pr-str (tag/read-string foo-string)) (pr-str foo42)))
+    (is (= (tag/read-string (pr-str (tag/read-string foo-string))) foo42))
+    (is (= (pr-str (tag/read-string nested-string)) (pr-str nested)))
+    (is (= (tag/read-string (pr-str (tag/read-string (pr-str nested)))) nested))))

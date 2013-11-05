@@ -1,4 +1,4 @@
-(defproject com.velisco/tagged "0.3.1"
+(defproject com.velisco/tagged "0.3.2-SNAPSHOT"
   :description "Clojure library for printing and reading Records as EDN tagged literals"
   :url "http://github.com/miner/tagged"
   :license {:name "Eclipse Public License"
