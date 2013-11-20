@@ -17,16 +17,48 @@
   (when (namespace tag)
     (resolve (symbol (str (namespace tag) "/map->" (name tag))))))
 
-(defn tagged-default-reader 
+;; We would like to be able to compose multiple functions to implement a data-reader.  The
+;; idea is that one data-reader could call a sequence of "tag-reader" fns until one returns
+;; a truthy value, which is the result for the data-reader.  A tag-reader fn takes two args
+;; the tag and val (like *default-data-reader-fn*).  A tag-reader returns the appropriate
+;; result, or nil to decline.  That makes it simpler to compose multiple tag-readers.
+;; However, remember that you should not return nil as the final result of a data-reader
+;; (see CLJ-1138) so your data-reader should throw a useful exception.  (Note that `false`
+;; is non-truthy so it's treated like nil.)  Use `some-tag-reader-fn` to combine tag-reader
+;; fns with a default exception if no tag-reader succeeds.
+
+(defn throw-tag-reader [tag val]
+  (throw (ex-info (str "No appropriate reader function for tag " tag)
+                  {:tag tag :value val})))
+
+(defn record-tag-reader [tag val]
+  (when-let [factory (and (map? val)
+                          (Character/isUpperCase ^Character (first (name tag)))
+                          (tag->factory tag))]
+    (factory val)))
+
+(defn- keep-first [f xs]
+  "Returns first truthy result of lazily applying `f` to each of the elements of `xs`.
+  Returns nil if no truthy result is found.  Unlike `keep`, will not return false."
+  (first (remove false? (keep f xs))))
+
+(defn some-tag-reader-fn
+  "Takes any number of tag-reader functions and returns a default data-reader fn taking two
+  args, tag and value.  The data-reader will either return a truthy value or throw an exception
+  if the tag cannot be handled appropriately with the value."
+  ([] throw-tag-reader)
+  ([f] (fn [tag val] (or (f tag val) (throw-tag-reader tag val))))
+  ([f g] (fn [tag val] (or (f tag val) (g tag val) (throw-tag-reader tag val))))
+  ([f g h] (fn [tag val] (or (f tag val) (g tag val) (h tag val) (throw-tag-reader tag val))))
+  ([f g h & more] (fn [tag val]
+                    (or (keep-first (fn [r] (r tag val)) (conj more h g f))
+                        (throw-tag-reader tag val)))))
+
+(def tagged-default-reader 
   "Default data-reader for reading an EDN tagged literal as a Record.  If the tag corresponds to a
   known Record class (tag my.ns/Rec for class my.ns.Rec), use that Record's map-style factory on
   the given map value.  If the tag is unknown, use the generic miner.tagged.TaggedValue."  
-  [tag value]
-  (if-let [factory (and (map? value)
-                        (Character/isUpperCase ^Character (first (name tag)))
-                        (tag->factory tag))]
-    (factory value)
-    (->TaggedValue tag value)))
+  (some-tag-reader-fn record-tag-reader ->TaggedValue))
 
 (defn- record-name [record-class]
   "Returns the record's name as a String given the class `record-class`."
