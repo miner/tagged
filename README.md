@@ -24,7 +24,7 @@ You're welcome to copy the source and modify it to suit your needs.
 
 Add the dependency to your project.clj:
 
-    [com.velisco/tagged "0.3.1"]
+    [com.velisco/tagged "0.3.4"]
 
 
 In case I forget to update the version number here in the README, the latest version is available on
