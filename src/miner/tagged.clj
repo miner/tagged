@@ -1,7 +1,8 @@
 (ns miner.tagged
   (:refer-clojure :exclude [read read-string])
   (:require [clojure.edn :as edn]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [clojure.core.memoize :as memo]))
 
 ;; adapted from "The Data-Reader's Guide to the Galaxy" talk at Clojure/West 2013
 
@@ -17,51 +18,72 @@
   (when (namespace tag)
     (resolve (symbol (str (namespace tag) "/map->" (name tag))))))
 
-;; We would like to be able to compose multiple functions to implement a data-reader.  The
-;; idea is that one data-reader could call a sequence of "tag-reader" fns until one returns
-;; a truthy value, which is the result for the data-reader.  A tag-reader fn takes two args
-;; the tag and val (like *default-data-reader-fn*).  A tag-reader returns the appropriate
-;; result, or nil to decline.  That makes it simpler to compose multiple tag-readers.
-;; However, remember that you should not return nil as the final result of a data-reader
-;; (see CLJ-1138) so your data-reader should throw a useful exception.  (Note that `false`
-;; is non-truthy so it's treated like nil.)  Use `some-tag-reader-fn` to combine tag-reader
-;; fns with a default exception if no tag-reader succeeds.
+;; A "tag-reader" is a fn taking two args, the tag symbol and a value, like a
+;; *default-data-reader-fn*.  Unlike a data-reader, a tag-reader may return nil if it does not
+;; want to handle a particular value.  (See CLJ-1138 for more information about why a
+;; data-reader is not allowed to return nil.)  The tag-reader convention makes is simpler to
+;; compose multiple reader functions as a single data-reader.  You can combine several
+;; tag-readers with `some-tag-reader`.  You can wrap a tag-reader to work as a data-reader
+;; with `data-reader` which throws if none of the tag-readers returns non-nil.  Note that a
+;; data-reader must return a truthy value or throw an exception.  The `throw-tag-reader`
+;; always throws so it's appropriate to use as your last resort tag-reader.
 
-(defn throw-tag-reader [tag val]
-  (throw (ex-info (str "No appropriate reader function for tag " tag)
+(defn throw-tag-reader
+  "Always throws an exception for a `tag` and `val`."
+  [tag val]
+  (throw (ex-info (str "No appropriate tag-reader function for tag " tag)
                   {:tag tag :value val})))
 
-(defn record-tag-reader [tag val]
+(defn record-tag-reader
+  "If the tag corresponds to a record class (for example, tag my.ns/Rec matches record
+  my.ns.Rec) and the `val` is a map, use the record factory to return a value.  Otherwise,
+  nil."
+  [tag val]
   (when-let [factory (and (map? val)
                           (Character/isUpperCase ^Character (first (name tag)))
                           (tag->factory tag))]
     (factory val)))
 
-(defn- keep-first [f xs]
+(defn- keep-first 
   "Returns first truthy result of lazily applying `f` to each of the elements of `xs`.
   Returns nil if no truthy result is found.  Unlike `keep`, will not return false."
+  [f xs]
   (first (remove false? (keep f xs))))
 
-(defn some-tag-reader-fn
-  "Takes any number of tag-reader functions and returns a default data-reader fn taking two
-  args, tag and value.  The data-reader will either return a truthy value or throw an exception
-  if the tag cannot be handled appropriately with the value."
+(defn some-tag-reader
+  "Takes any number of tag-reader functions and returns a composite tag-reader that applies
+the tag-readers in order returning the first truthy result (or nil if none)."
+  ([] (constantly nil))
+  ([tag-reader] tag-reader)
+  ([r1 r2] (fn [tag val] (or (r1 tag val) (r2 tag val))))
+  ([r1 r2 r3] (fn [tag val] (or (r1 tag val) (r2 tag val) (r3 tag val))))
+  ([r1 r2 r3 & more] (fn [tag val] (keep-first (fn [r] (r tag val)) (conj more r3 r2 r1)))))
+
+(defn safe-tag-reader
+  "Takes any number of tag-reader functions and returns a composite tag-reader which will
+  either return a truthy value or throw an exception if the tag cannot be handled
+  appropriately with the value."
   ([] throw-tag-reader)
-  ([f] (fn [tag val] (or (f tag val) (throw-tag-reader tag val))))
-  ([f g] (fn [tag val] (or (f tag val) (g tag val) (throw-tag-reader tag val))))
-  ([f g h] (fn [tag val] (or (f tag val) (g tag val) (h tag val) (throw-tag-reader tag val))))
-  ([f g h & more] (fn [tag val]
-                    (or (keep-first (fn [r] (r tag val)) (conj more h g f))
-                        (throw-tag-reader tag val)))))
+  ([tag-reader] (some-tag-reader tag-reader throw-tag-reader))
+  ([r1 r2] (some-tag-reader r1 r2 throw-tag-reader))
+  ([r1 r2 r3] (some-tag-reader r1 r2 r3 throw-tag-reader))
+  ([r1 r2 r3 & more] (apply some-tag-reader r1 r2 r3 (concat more (list throw-tag-reader)))))
+
+(defn data-reader
+  "Returns a data-reader for a particular tag derived from one or more tag-readers."
+  ([tag tag-reader] (partial (safe-tag-reader tag-reader) tag))
+  ([tag tag-reader & more-tag-readers] 
+     (partial (apply safe-tag-reader tag-reader more-tag-readers) tag)))
 
 (def tagged-default-reader 
   "Default data-reader for reading an EDN tagged literal as a Record.  If the tag corresponds to a
   known Record class (tag my.ns/Rec for class my.ns.Rec), use that Record's map-style factory on
   the given map value.  If the tag is unknown, use the generic miner.tagged.TaggedValue."  
-  (some-tag-reader-fn record-tag-reader ->TaggedValue))
+  (some-tag-reader record-tag-reader ->TaggedValue))
 
-(defn- record-name [record-class]
+(defn- record-name
   "Returns the record's name as a String given the class `record-class`."
+  [record-class]
   (str/replace (pr-str record-class) \_ \-))
 
 (defn- tag-string
@@ -78,13 +100,47 @@
   (when-let [tagstr (tag-string record-class)]
     (symbol tagstr)))
 
-(defn class->factory
+(defn- compute-class->factory
   "Returns the map-style record factory for the `record-class`."
   [record-class]
   (let [cname (record-name record-class)
         dot (.lastIndexOf ^String cname ".")]
     (when (pos? dot)
       (resolve (symbol (str (subs cname 0 dot) "/map->" (subs cname (inc dot))))))))
+
+
+;; borrowed from clojure.core.reducers
+(defmacro ^:private compile-if
+  "Evaluate `exp` and if it returns logical true and doesn't error, expand to
+  `then`.  Else expand to `else`.
+
+  (compile-if (Class/forName \"java.util.concurrent.ForkJoinTask\")
+    (do-cool-stuff-with-fork-join)
+    (fall-back-to-executor-services))"
+  [exp then else]
+  (if (try (eval exp)
+           (catch Throwable _ false))
+    `(do ~then)
+    `(do ~else)))
+
+;; java.lang.ClassValue requires JDK 1.7.  If it's not available at compile time, we
+;; have to memoize the factory call.  The check for *compile-files* prevents AOT compilation
+;; from capturing the JDK dependency at AOT compile-time, which could cause a failure if the
+;; resulting JAR is later used with an older JDK at runtime.
+
+(compile-if (and (not *compile-files*) (Class/forName "java.lang.ClassValue"))
+
+ (let [record-factory-classvalue (proxy [java.lang.ClassValue] []
+                                    (computeValue [c]
+                                      (when (.isAssignableFrom clojure.lang.IRecord c) 
+                                        (compute-class->factory c))))]
+   (defn class->factory 
+     "Returns the map-style record factory for the `record-class`."
+     [^Class record-class]
+     (.get record-factory-classvalue record-class)))
+
+ (def class->factory (memo/lru compute-class->factory)) )
+
 
 ;; preserve the original string representation of the unknown tagged literal
 (defmethod print-method miner.tagged.TaggedValue [this ^java.io.Writer w]
