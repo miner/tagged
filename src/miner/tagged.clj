@@ -1,8 +1,7 @@
 (ns miner.tagged
   (:refer-clojure :exclude [read read-string])
   (:require [clojure.edn :as edn]
-            [clojure.string :as str]
-            [clojure.core.memoize :as memo]))
+            [clojure.string :as str]))
 
 ;; adapted from "The Data-Reader's Guide to the Galaxy" talk at Clojure/West 2013
 
@@ -11,12 +10,18 @@
   Object 
   (toString [x] (pr-str x)))
 
-(defn tag->factory
-  "Returns the map-style record factory for the `tag` symbol.  Returns nil if `tag` does not
+(defn- calc-tag->factory
+  "Resolves the map-style record factory for the `tag` symbol.  Returns nil if `tag` does not
   refer to a record."
   [tag]
-  (when (namespace tag)
+  (when (and (namespace tag) (Character/isUpperCase ^Character (first (name tag))))
     (resolve (symbol (str (namespace tag) "/map->" (name tag))))))
+
+(def ^{:arglists (:arglists (meta #'calc-tag->factory))} tag->factory
+  "Returns the map-style record factory for the `tag` symbol.  Returns nil if `tag` does not
+  refer to a record.  Results are memoized."
+  (memoize calc-tag->factory))
+
 
 ;; A "tag-reader" is a fn taking two args, the tag symbol and a value, like a
 ;; *default-data-reader-fn*.  Unlike a data-reader, a tag-reader may return nil if it does not
@@ -39,9 +44,7 @@
   my.ns.Rec) and the `val` is a map, use the record factory to return a value.  Otherwise,
   nil."
   [tag val]
-  (when-let [factory (and (map? val)
-                          (Character/isUpperCase ^Character (first (name tag)))
-                          (tag->factory tag))]
+  (when-let [factory (and (map? val) (tag->factory tag))]
     (factory val)))
 
 (defn- keep-first 
@@ -100,47 +103,10 @@ the tag-readers in order returning the first truthy result (or nil if none)."
   (when-let [tagstr (tag-string record-class)]
     (symbol tagstr)))
 
-(defn- compute-class->factory
+(defn class->factory
   "Returns the map-style record factory for the `record-class`."
   [record-class]
-  (let [cname (record-name record-class)
-        dot (.lastIndexOf ^String cname ".")]
-    (when (pos? dot)
-      (resolve (symbol (str (subs cname 0 dot) "/map->" (subs cname (inc dot))))))))
-
-
-;; borrowed from clojure.core.reducers
-(defmacro ^:private compile-if
-  "Evaluate `exp` and if it returns logical true and doesn't error, expand to
-  `then`.  Else expand to `else`.
-
-  (compile-if (Class/forName \"java.util.concurrent.ForkJoinTask\")
-    (do-cool-stuff-with-fork-join)
-    (fall-back-to-executor-services))"
-  [exp then else]
-  (if (try (eval exp)
-           (catch Throwable _ false))
-    `(do ~then)
-    `(do ~else)))
-
-;; java.lang.ClassValue requires JDK 1.7.  If it's not available at compile time, we
-;; have to memoize the factory call.  The check for *compile-files* prevents AOT compilation
-;; from capturing the JDK dependency at AOT compile-time, which could cause a failure if the
-;; resulting JAR is later used with an older JDK at runtime.
-
-(compile-if (and (not *compile-files*) (Class/forName "java.lang.ClassValue"))
-
- (let [record-factory-classvalue (proxy [java.lang.ClassValue] []
-                                    (computeValue [c]
-                                      (when (.isAssignableFrom clojure.lang.IRecord c) 
-                                        (compute-class->factory c))))]
-   (defn class->factory 
-     "Returns the map-style record factory for the `record-class`."
-     [^Class record-class]
-     (.get record-factory-classvalue record-class)))
-
- (def class->factory (memo/lru compute-class->factory)) )
-
+  (tag->factory (class->tag record-class)))
 
 ;; preserve the original string representation of the unknown tagged literal
 (defmethod print-method miner.tagged.TaggedValue [this ^java.io.Writer w]
