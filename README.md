@@ -2,11 +2,12 @@
 
 A Clojure library for printing and reading Records as EDN tagged literals.
 
-The [**EDN**](https://github.com/edn-format/edn) format does not directly support Clojure records.
-This small library allows records to be printed and read as tagged literals which work with EDN.
-Just implement a `print-method` that calls `miner.tagged/pr-tagged-record-on` and your record will
-`pr` in a tagged literal format.  For example, the record class name `my.ns.Rec` is translated into
-the literal tag `my.ns/Rec`.  That slight notational change, plus a convenient default data-reader
+The [**EDN**](https://github.com/edn-format/edn) format does not directly support Clojure
+records.  This small library allows records to be printed and read as tagged literals which
+work with EDN.  Just implement a `print-method` that calls
+`miner.tagged/pr-tagged-record-on` and your record will `pr` in a tagged literal format.
+For example, the record class name `my.ns.Rec` is translated into the literal tag
+`my.ns/Rec`.  That slight notational change, plus a convenient default data-reader
 (`tagged-default-reader`), allows you to use records as EDN data.  The library also includes
 variants of `read` and `read-string` with the `tagged-default-reader` set as the `:default`.
 
@@ -15,10 +16,31 @@ record which preserves the original print representation as a tagged literal.  T
 your program is interested only in a subset of the data it's processing and you want to preserve any
 information that you don't understand.
 
+I use the term *tag-reader* to describe a function taking two args, the tag symbol and a
+value, like a `*default-data-reader-fn*`.  Unlike a [data-reader][reader], a tag-reader may
+return nil if it does not want to handle a particular value. (See CLJ-1138 for more
+information about why a data-reader is not allowed to return nil.) The tag-reader convention
+makes is simpler to compose multiple tag-reader functions using `some-tag-reader`. You can
+wrap one or more tag-readers to create a data-reader with `data-reader`.  The
+`throw-tag-reader` always throws so it's appropriate to use as your last resort tag-reader.
+
+[reader]: http://clojure.org/reader#The%20Reader--Tagged%20Literals
+
+The `tagged-default-reader` is actually composed of a couple of *tag-readers*.  The tagged
+literal format for records is read with the `record-tag-reader`.  If that returns nil, then
+the tagged literal is read as a TaggedValue.  Note that the `->TaggedValue` factory function
+works nicely as a tag-reader.  It handles the case of an "unknown" tag.  The definition of
+`tagged-default-reader` is just:
+
+    (def tagged-default-reader (some-tag-reader record-tag-reader ->TaggedValue))
+
+You may want to combine your own tag-readers with `record-tag-reader` to make a more
+sophisticated `*default-data-reader-fn*`.  Users of your library might want to use
+tag-readers provided by your library for making new tag-readers.
+
 This code was adapted from my presentation at *Clojure/West 2013*:
 [**The Data-Reader's Guide to The Galaxy**](http://www.infoq.com/presentations/Clojure-Data-Reader).
 You're welcome to copy the source and modify it to suit your needs.
-
 
 ## Leiningen
 
