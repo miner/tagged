@@ -147,6 +147,10 @@ the tag-readers in order returning the first truthy result (or nil if none)."
   (edn-str [this])
   (edn-value [this]))
 
+(defn- strip-tag4 [^String tag-str]
+  ;; strips "#inst " (or "#uuid ") and quoted quotes to get plain string
+  (.substring tag-str 7 (dec (.length tag-str))))
+
 (extend-protocol EdnTag
   nil
   (edn-tag [this] nil)
@@ -163,6 +167,11 @@ the tag-readers in order returning the first truthy result (or nil if none)."
   (edn-str [this] (pr-str this))
   (edn-value [this] (:value this))
 
+  clojure.lang.TaggedLiteral
+  (edn-tag [this] (:tag this))
+  (edn-str [this] (pr-str this))
+  (edn-value [this] (:form this))
+
   clojure.lang.IRecord
   (edn-tag [this] (class->tag (class this)))
   (edn-str [this] (with-out-str (pr-tagged-record-on this *out*)))
@@ -171,22 +180,23 @@ the tag-readers in order returning the first truthy result (or nil if none)."
   java.util.Date 
   (edn-tag [this] 'inst)
   (edn-str [this] (pr-str this))
-  (edn-value [this] this)
+  (edn-value [this] (strip-tag4 (pr-str this)))
 
   java.util.Calendar
   (edn-tag [this] 'inst)
   (edn-str [this] (pr-str this))
-  (edn-value [this] this)
+  (edn-value [this] (strip-tag4 (pr-str this)))
 
   java.sql.Timestamp
   (edn-tag [this] 'inst)
   (edn-str [this] (pr-str this))
-  (edn-value [this] this)
+  (edn-value [this] (strip-tag4 (pr-str this)))
 
   java.util.UUID
   (edn-tag [this] 'uuid)
   (edn-str [this] (pr-str this))  
-  (edn-value [this] this)  )
+  (edn-value [this] (strip-tag4 (pr-str this)))  )
+  
 
 ;; In the REPL, you can use this to install the tagged-default-reader as the default:
 

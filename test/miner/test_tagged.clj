@@ -32,7 +32,10 @@
 
 (deftest edn-values
   (is (nil? (tag/edn-value nil)))
-  (is (= (tag/edn-value (java.util.Date. 0)) (java.util.Date. 0)))
+  (is (= (tag/edn-value (java.util.Date. 0)) "1970-01-01T00:00:00.000-00:00"))
+  (is (= (tag/edn-value (java.util.Date. 0)) "1970-01-01T00:00:00.000-00:00"))
+  (is (= (tag/edn-value (java.util.UUID/fromString "277826bd-e220-4809-806e-ef906d8fb6b4"))
+         "277826bd-e220-4809-806e-ef906d8fb6b4"))
   (is (= (tag/edn-value 'foo) 'foo))
   (is (= (tag/edn-value (->Foo 42)) {:a 42})))  
 
@@ -40,9 +43,13 @@
   (let [unknown-string "#unk.ns/Unk 42"
         foo-string "#miner.test-tagged/Foo {:a 42}"
         unk42 (tag/->TaggedValue 'unk.ns/Unk 42)
+        lit42 (clojure.lang.TaggedLiteral/create 'lit {:k 42})
         foo42 (->Foo 42)
         nested-string "#miner.test-tagged/Foo {:a #unk.ns/Unk 42}"
         nested (->Foo unk42)]
+    (is (= (tag/edn-tag lit42) 'lit))
+    (is (= (tag/edn-value lit42) {:k 42}))
+    (is (= (tag/edn-str lit42) "#lit {:k 42}"))
     (is (= (tag/read-string unknown-string) unk42))
     (is (= (tag/edn-tag (tag/read-string unknown-string)) 'unk.ns/Unk))
     (is (= (tag/edn-value (tag/read-string unknown-string)) 42))
