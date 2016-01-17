@@ -33,7 +33,6 @@
 (deftest edn-values
   (is (nil? (tag/edn-value nil)))
   (is (= (tag/edn-value (java.util.Date. 0)) "1970-01-01T00:00:00.000-00:00"))
-  (is (= (tag/edn-value (java.util.Date. 0)) "1970-01-01T00:00:00.000-00:00"))
   (is (= (tag/edn-value (java.util.UUID/fromString "277826bd-e220-4809-806e-ef906d8fb6b4"))
          "277826bd-e220-4809-806e-ef906d8fb6b4"))
   (is (= (tag/edn-value 'foo) 'foo))
