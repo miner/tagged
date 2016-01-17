@@ -4,6 +4,11 @@
 
 (defrecord Foo [a])
 
+;; roughly equivalent as (Date. 0)
+(def greg-epoch (doto (java.util.GregorianCalendar. (java.util.TimeZone/getTimeZone "GMT"))
+                  (.clear) (.set 1970 0 1)))
+
+
 (defmethod print-method miner.test_tagged.Foo [this w]
   (tag/pr-tagged-record-on this w))
 
@@ -17,22 +22,31 @@
   (is (= (tag/class->tag miner.test_tagged.Foo) 'miner.test-tagged/Foo))
   (is (= (tag/class->tag (class (->Foo 42))) 'miner.test-tagged/Foo)))
 
-(deftest edn-tag-and-str
+(deftest edn-tags
   (is (nil? (tag/edn-tag 42)))
-  (is (= (tag/edn-str 'foo) "foo"))
   (is (= (tag/edn-tag (->Foo 42)) 'miner.test-tagged/Foo))
-  (is (= (tag/edn-str (->Foo 42)) "#miner.test-tagged/Foo {:a 42}"))
   (is (= (tag/edn-tag (java.util.Date.)) 'inst))
   (is (= (tag/edn-tag (java.util.Calendar/getInstance)) 'inst))
+  (is (= (tag/edn-tag greg-epoch) 'inst))
   (is (= (tag/edn-tag (java.sql.Timestamp. 0)) 'inst))
+  (is (= (tag/edn-tag (java.util.UUID/fromString "277826bd-e220-4809-806e-ef906d8fb6b4")) 'uuid)))
+
+(deftest edn-strs
+  (is (= (tag/edn-str nil) "nil"))
+  (is (= (tag/edn-str 'foo) "foo"))
+  (is (= (tag/edn-str (->Foo 42)) "#miner.test-tagged/Foo {:a 42}"))
+  (is (= (tag/edn-str (java.util.Date. 0)) "#inst \"1970-01-01T00:00:00.000-00:00\""))
+  (is (= (tag/edn-str greg-epoch) "#inst \"1970-01-01T00:00:00.000+00:00\""))
   (is (= (tag/edn-str (java.sql.Timestamp. 0)) "#inst \"1970-01-01T00:00:00.000000000-00:00\""))
-  (is (= (tag/edn-tag (java.util.UUID/fromString "277826bd-e220-4809-806e-ef906d8fb6b4")) 'uuid))
   (is (= (tag/edn-str (java.util.UUID/fromString "277826bd-e220-4809-806e-ef906d8fb6b4"))
          "#uuid \"277826bd-e220-4809-806e-ef906d8fb6b4\"")))
 
 (deftest edn-values
   (is (nil? (tag/edn-value nil)))
   (is (= (tag/edn-value (java.util.Date. 0)) "1970-01-01T00:00:00.000-00:00"))
+  (is (= (tag/edn-value (java.util.Date. 0)) "1970-01-01T00:00:00.000-00:00"))
+  (is (= (tag/edn-value greg-epoch) "1970-01-01T00:00:00.000+00:00"))
+  (is (= (tag/edn-value (java.sql.Timestamp. 0)) "1970-01-01T00:00:00.000000000-00:00"))
   (is (= (tag/edn-value (java.util.UUID/fromString "277826bd-e220-4809-806e-ef906d8fb6b4"))
          "277826bd-e220-4809-806e-ef906d8fb6b4"))
   (is (= (tag/edn-value 'foo) 'foo))
