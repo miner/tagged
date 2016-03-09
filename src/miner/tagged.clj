@@ -14,7 +14,7 @@
   "Resolves the map-style record factory for the `tag` symbol.  Returns nil if `tag` does not
   refer to a record."
   [tag]
-  (when (and (namespace tag) (Character/isUpperCase ^Character (first (name tag))))
+  (when (namespace tag)
     (resolve (symbol (str (namespace tag) "/map->" (name tag))))))
 
 (def ^{:arglists (:arglists (meta #'calc-tag->factory))} tag->factory
