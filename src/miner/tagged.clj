@@ -5,7 +5,11 @@
 
 ;; adapted from "The Data-Reader's Guide to the Galaxy" talk at Clojure/West 2013
 
-;; Holder for unknown tags
+;; TaggedValue is obsolete.  We're keeping it here for backwards compatibility, but consider
+;; it deprecated.  Clojure 1.7 standardized similiar functionality with
+;; clojure.lang.TaggedLiteral and the `tagged-literal` function.
+
+;; DEPRECATED
 (defrecord TaggedValue [tag value]
   Object 
   (toString [x] (pr-str x)))
@@ -81,8 +85,8 @@ the tag-readers in order returning the first truthy result (or nil if none)."
 (def tagged-default-reader 
   "Default data-reader for reading an EDN tagged literal as a Record.  If the tag corresponds to a
   known Record class (tag my.ns/Rec for class my.ns.Rec), use that Record's map-style factory on
-  the given map value.  If the tag is unknown, use the generic miner.tagged.TaggedValue."  
-  (some-tag-reader record-tag-reader ->TaggedValue))
+  the given map value.  If the tag is unknown, use the `tagged-literal`."
+  (some-tag-reader record-tag-reader tagged-literal))
 
 (defn- record-name
   "Returns the record's name as a String given the class `record-class`."

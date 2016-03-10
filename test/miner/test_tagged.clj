@@ -55,14 +55,18 @@
 (deftest reading-and-printing
   (let [unknown-string "#unk.ns/Unk 42"
         foo-string "#miner.test-tagged/Foo {:a 42}"
-        unk42 (tag/->TaggedValue 'unk.ns/Unk 42)
+        unk42 (tagged-literal 'unk.ns/Unk 42)
         lit42 (clojure.lang.TaggedLiteral/create 'lit {:k 42})
+        lit57 (tagged-literal 'k/lit 57)
         foo42 (->Foo 42)
         nested-string "#miner.test-tagged/Foo {:a #unk.ns/Unk 42}"
         nested (->Foo unk42)]
     (is (= (tag/edn-tag lit42) 'lit))
     (is (= (tag/edn-value lit42) {:k 42}))
     (is (= (tag/edn-str lit42) "#lit {:k 42}"))
+    (is (= (tag/edn-tag lit57) 'k/lit))
+    (is (= (tag/edn-value lit57) 57))
+    (is (= (tag/edn-str lit57) "#k/lit 57"))
     (is (= (tag/read-string unknown-string) unk42))
     (is (= (tag/edn-tag (tag/read-string unknown-string)) 'unk.ns/Unk))
     (is (= (tag/edn-value (tag/read-string unknown-string)) 42))
