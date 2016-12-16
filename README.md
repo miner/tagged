@@ -28,11 +28,16 @@ wrap one or more tag-readers to create a data-reader with `data-reader`.  The
 
 The `tagged-default-reader` is actually composed of a couple of *tag-readers*.  The tagged
 literal format for records is read with the `record-tag-reader`.  If that returns nil, then
-the tagged literal is read as a TaggedValue.  Note that the `->TaggedValue` factory function
-works nicely as a tag-reader.  It handles the case of an "unknown" tag.  The definition of
-`tagged-default-reader` is just:
+the tagged literal is read as a clojure.lang.TaggedLiteral.
 
-    (def tagged-default-reader (some-tag-reader record-tag-reader ->TaggedValue))
+    Note that the `miner.tagged/->TaggedValue` factory function that was previously used in this
+    library is now obsolete. Clojure added a similar function named `tagged-literal` which
+    replaces it.  
+
+The `tagged-literal` function works nicely as a tag-reader.  It handles the case of an
+"unknown" tag.  The definition of `tagged-default-reader` is just:
+
+    (def tagged-default-reader (some-tag-reader record-tag-reader tagged-literal))
 
 You may want to combine your own tag-readers with `record-tag-reader` to make a more
 sophisticated `*default-data-reader-fn*`.  Users of your library might want to use
@@ -86,15 +91,18 @@ Add the dependency to your project.clj:
 	(def unknown (tag/read-string "#my.ns/Unknown 13"))
 	(pr-str unknown)
 	;;=> "#my.ns/Unknown 13"
-	;; The print representation is preserved, but the value is really a record.
+	;; The print representation is preserved, but the value is a clojure.lang.TaggedLiteral.
 
 	(class unknown)
-	;;=> miner.tagged.TaggedValue
+	;;=> clojure.lang.TaggedLiteral
 
+    (tagged-literal? unknown)
+	;;=> true
+	
 	(:tag unknown)
 	;;=> my.ns/Unknown
 
-	(:value unknown)
+	(:form unknown)
 	;;=> 13
 	
 
